@@ -7,6 +7,8 @@ const DEFAULT_S = 0.1;
 const DEFAULT_R = 0.9;
 const LOSS_HISTORY_MAX = 600;
 
+export type RenderId = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
 let trainer: Trainer | null = null;
 function getTrainer(n: number): Trainer {
   if (!trainer) trainer = createTrainer(n);
@@ -36,6 +38,8 @@ export type ExplorerState = {
   loss: number;
   lossHistory: number[];
   step: number;
+  presenterRender: RenderId | null;
+  setPresenterRender: (v: RenderId | null) => void;
   setS: (v: number) => void;
   setR: (v: number) => void;
   setReLU: (v: boolean) => void;
@@ -61,6 +65,8 @@ export const useExplorer = create<ExplorerState>((set, get) => {
     loss: 0,
     lossHistory: [],
     step: 0,
+    presenterRender: null,
+    setPresenterRender: (v) => set({ presenterRender: v }),
     setS: (v) => set({ S: v }),
     setR: (v) => set({ r: v }),
     setReLU: (v) => set({ useReLU: v }),

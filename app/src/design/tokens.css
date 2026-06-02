@@ -9,6 +9,20 @@
   --rep: #d8b46a;
   --pos: #e0a64a;
   --neg: #4aa6a0;
+
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-prose: 'Spectral', Georgia, serif;
 }
 
-html, body, #root { background: var(--bg); color: var(--text); }
+html, body, #root {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-prose);
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}

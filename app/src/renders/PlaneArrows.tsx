@@ -60,7 +60,7 @@ export function PlaneArrows({
     const dimmed = dimInactive ? dimInactive[i] <= 0 : false;
     const baseOp = Math.min(1, Math.max(0.12, nrm * 1.15));
     const op = dimmed ? Math.min(0.22, baseOp) : baseOp;
-    const sw = dimmed ? 1 : 2.6;
+    const sw = dimmed ? 1 : 3.2;
     const col = HUES[i % HUES.length];
 
     arrows.push(
@@ -107,7 +107,7 @@ export function PlaneArrows({
           fill={col}
           opacity={op}
           fontFamily="'IBM Plex Mono', monospace"
-          fontSize={Math.max(10, 11 * (size / 400))}
+          fontSize={Math.max(11, 12 * (size / 400))}
         >
           {i}
         </text>,

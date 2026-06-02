@@ -68,6 +68,27 @@ export function shapeName(k: number): string {
   return named[k] ?? `${k}-gone`;
 }
 
+export type Regime = 'absent' | 'dedicated' | 'superposed';
+
+export function classifyFeatures(W: Matrix2xN): Regime[] {
+  const n = W[0].length;
+  const G = WtW(W);
+  const out: Regime[] = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const self = G[i][i];
+    let maxOff = 0;
+    for (let j = 0; j < n; j++) {
+      if (j === i) continue;
+      const a = Math.abs(G[i][j]);
+      if (a > maxOff) maxOff = a;
+    }
+    if (self < 0.1) out[i] = 'absent';
+    else if (self > 0.7 && maxOff < 0.15) out[i] = 'dedicated';
+    else out[i] = 'superposed';
+  }
+  return out;
+}
+
 export function cloneParams(p: ModelParams): ModelParams {
   return {
     W: [p.W[0].slice(), p.W[1].slice()],

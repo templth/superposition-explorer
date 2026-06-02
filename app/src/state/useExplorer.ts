@@ -5,6 +5,7 @@ import type { Matrix2xN } from '../engine/types';
 const DEFAULT_N = 5;
 const DEFAULT_S = 0.1;
 const DEFAULT_R = 0.9;
+const LOSS_HISTORY_MAX = 600;
 
 let trainer: Trainer | null = null;
 function getTrainer(n: number): Trainer {
@@ -33,6 +34,8 @@ export type ExplorerState = {
   W: Matrix2xN;
   b: number[];
   loss: number;
+  lossHistory: number[];
+  step: number;
   setS: (v: number) => void;
   setR: (v: number) => void;
   setReLU: (v: boolean) => void;
@@ -56,6 +59,8 @@ export const useExplorer = create<ExplorerState>((set, get) => {
     W: snap.W,
     b: snap.b,
     loss: 0,
+    lossHistory: [],
+    step: 0,
     setS: (v) => set({ S: v }),
     setR: (v) => set({ r: v }),
     setReLU: (v) => set({ useReLU: v }),
@@ -64,7 +69,7 @@ export const useExplorer = create<ExplorerState>((set, get) => {
       const tr = getTrainer(v);
       tr.reset(v);
       const s = tr.snapshot();
-      set({ n: v, xin: freshXin(v), W: s.W, b: s.b, loss: 0 });
+      set({ n: v, xin: freshXin(v), W: s.W, b: s.b, loss: 0, lossHistory: [], step: 0 });
     },
     setXin: (i, v) => {
       const next = get().xin.slice();
@@ -76,9 +81,16 @@ export const useExplorer = create<ExplorerState>((set, get) => {
       const tr = getTrainer(get().n);
       tr.reset(get().n);
       const s = tr.snapshot();
-      set({ W: s.W, b: s.b, loss: 0, paused: false });
+      set({ W: s.W, b: s.b, loss: 0, lossHistory: [], step: 0, paused: false });
     },
-    publish: (W, b, loss) => set({ W, b, loss }),
+    publish: (W, b, loss) => {
+      const st = get();
+      const hist = st.lossHistory;
+      const next = hist.length >= LOSS_HISTORY_MAX
+        ? hist.slice(hist.length - LOSS_HISTORY_MAX + 1).concat(loss)
+        : hist.concat(loss);
+      set({ W, b, loss, lossHistory: next, step: st.step + 1 });
+    },
   };
 });
 

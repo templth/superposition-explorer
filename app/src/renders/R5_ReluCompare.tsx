@@ -68,7 +68,11 @@ export function R5_ReluCompare() {
         </div>
       </div>
 
-      <svg viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', width: '100%', height: 'auto' }}>
+      <svg
+        viewBox="0 0 400 400"
+        preserveAspectRatio="xMidYMid meet"
+        style={{ display: 'block', width: '100%', maxWidth: 340, height: 'auto', margin: '0 auto' }}
+      >
         <PlaneArrows W={W} n={n} size={400} />
       </svg>
 

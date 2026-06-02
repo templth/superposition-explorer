@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Explorateur — Superposition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Spectral:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0d0e11; --panel:#14161b; --panel2:#191c22; --line:#2a2e37;
+    --text:#c9c7be; --dim:#7b7d82; --faint:#4a4d55;
+    --pos:#e0a64a;          /* interférence positive */
+    --neg:#4aa6a0;          /* interférence négative */
+    --rep:#d8b46a;          /* représentation (diagonale WᵀW) */
+    --hot:#e0a64a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:'Spectral',Georgia,serif}
+  body{
+    min-height:100vh;
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(224,166,74,0.04), transparent 40%),
+      linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+    background-size:100% 100%, 28px 28px, 28px 28px;
+    padding:32px 24px 64px;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+  header{margin-bottom:28px;border-bottom:1px solid var(--line);padding-bottom:18px}
+  .kicker{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+  h1{font-family:'Fraunces',serif;font-weight:600;font-size:30px;letter-spacing:-.01em;line-height:1.05}
+  h1 em{font-style:italic;color:var(--pos)}
+  .sub{margin-top:10px;color:var(--dim);font-size:15px;font-weight:300;max-width:60ch;line-height:1.5}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:24px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:4px;
+    padding:18px;position:relative}
+  .panel .tag{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--dim);margin-bottom:14px;display:flex;justify-content:space-between}
+  .panel .tag .val{color:var(--pos)}
+
+  svg{display:block;width:100%;height:auto}
+  .axis{stroke:var(--faint);stroke-width:1}
+  .ring{fill:none;stroke:var(--line);stroke-width:1;stroke-dasharray:3 4}
+  .flabel{font-family:'IBM Plex Mono',monospace;font-size:11px;fill:var(--text)}
+
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+  .lg{display:flex;align-items:center;gap:7px;font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;letter-spacing:.04em;color:var(--dim)}
+  .lg i{width:13px;height:13px;border-radius:2px;display:inline-block;flex-shrink:0}
+
+  /* controls */
+  .controls{margin-top:24px;background:var(--panel);border:1px solid var(--line);
+    border-radius:4px;padding:20px 22px}
+  .row{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:18px}
+  .row:last-child{margin-bottom:0}
+  label.ctl{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--dim);min-width:96px}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:2px;background:var(--line);
+    border-radius:2px;flex:1;min-width:160px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;
+    border-radius:50%;background:var(--pos);cursor:pointer;border:2px solid var(--bg)}
+  input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+    background:var(--pos);cursor:pointer;border:2px solid var(--bg)}
+  .num{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);min-width:56px;text-align:right}
+
+  .btnset{display:flex;gap:8px;flex-wrap:wrap}
+  button{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;
+    background:var(--panel2);color:var(--text);border:1px solid var(--line);
+    padding:8px 13px;border-radius:3px;cursor:pointer;transition:.15s}
+  button:hover{border-color:var(--pos);color:var(--pos)}
+  button.on{background:var(--pos);color:var(--bg);border-color:var(--pos)}
+  .nsel button{min-width:34px}
+
+  .preset-lab{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--dim);width:100%;margin-bottom:10px}
+
+  .readout{display:flex;gap:28px;margin-top:22px;padding-top:18px;border-top:1px solid var(--line);
+    font-family:'IBM Plex Mono',monospace}
+  .readout .item .k{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+  .readout .item .v{font-size:22px;color:var(--text);margin-top:4px}
+  .readout .item .v b{color:var(--pos)}
+
+  .note{margin-top:18px;font-size:13.5px;color:var(--dim);font-weight:300;line-height:1.55;max-width:74ch}
+  .note b{color:var(--text);font-weight:400}
+  .toggle-relu{display:flex;align-items:center;gap:12px}
+
+  /* injection — rendu 6 */
+  .inj-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+  .chip{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:6px 12px;border-radius:3px;
+    border:1px solid var(--line);background:var(--panel2);cursor:pointer;transition:.15s;color:var(--dim)}
+  .chip:hover{border-color:var(--dim)}
+  .inj-grid{display:grid;grid-template-columns:1fr auto 1.05fr auto 1fr;align-items:center;gap:6px}
+  @media(max-width:820px){.inj-grid{grid-template-columns:1fr;gap:14px}.inj-arrow{transform:rotate(90deg)}}
+  .inj-cell{text-align:center}
+  .inj-cap{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--dim);margin-bottom:8px}
+  .inj-arrow{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--faint);text-align:center;white-space:nowrap}
+  .inj-cell svg{max-width:230px;margin:0 auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">Toy model — Anthropic 2022 · entraîné en direct</div>
+    <h1>L'explorateur de <em>superposition</em></h1>
+    <p class="sub">Cinq concepts, deux dimensions. L'algèbre linéaire dit que c'est impossible.
+       Poussez la sparsité, et regardez le modèle ranger ses features en polygones.</p>
+  </header>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="tag"><span>Plan caché ℝ² — colonnes de W</span><span class="val" id="t-geom">—</span></div>
+      <svg id="geom" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="panel">
+      <div class="tag"><span>Matrice WᵀW — interférences</span><span class="val" id="t-heat">n×n</span></div>
+      <svg id="heat" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="legend">
+        <span class="lg"><i style="background:var(--rep)"></i>diagonale = représentation</span>
+        <span class="lg"><i style="background:var(--pos)"></i>interf. positive</span>
+        <span class="lg"><i style="background:var(--neg)"></i>interf. négative</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="row">
+      <span class="preset-lab">Cas types</span>
+      <div class="btnset" id="presets"></div>
+    </div>
+    <div class="row">
+      <label class="ctl">Sparsité S</label>
+      <input type="range" id="s-S" min="0" max="0.97" step="0.01" value="0.1">
+      <span class="num" id="v-S">0.10</span>
+    </div>
+    <div class="row">
+      <label class="ctl">Importance r</label>
+      <input type="range" id="s-r" min="0.4" max="1" step="0.01" value="0.9">
+      <span class="num" id="v-r">0.90</span>
+    </div>
+    <div class="row">
+      <label class="ctl">Features n</label>
+      <div class="btnset nsel" id="nsel"></div>
+      <div class="toggle-relu" style="margin-left:auto">
+        <label class="ctl" style="min-width:auto">Non-linéarité</label>
+        <button id="relu" class="on">ReLU ON</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <label class="ctl">Entraînement</label>
+      <div class="btnset">
+        <button id="pause">⏸ Pause</button>
+        <button id="retrain">↻ Réentraîner depuis zéro</button>
+      </div>
+      <span class="num" id="train-state" style="min-width:auto;color:var(--dim)">apprend…</span>
+    </div>
+
+    <div class="readout">
+      <div class="item"><div class="k">Représentées</div>
+        <div class="v"><b id="r-rep">2</b> / 2 dim.</div></div>
+      <div class="item"><div class="k">Géométrie</div>
+        <div class="v" id="r-shape" style="font-size:16px">orthogonale</div></div>
+      <div class="item"><div class="k">Perte</div>
+        <div class="v" id="r-loss" style="font-size:16px">—</div></div>
+    </div>
+  </div>
+
+  <div class="panel" id="inject-panel" style="margin-top:18px">
+    <div class="tag"><span>Rendu 6 — injection d'un vecteur creux</span><span class="val" id="t-inj">1 active</span></div>
+    <div class="inj-chips" id="inj-chips"></div>
+    <div class="inj-grid">
+      <div class="inj-cell"><div class="inj-cap">Entrée x</div><svg id="inj-in" viewBox="0 0 200 200"></svg></div>
+      <div class="inj-arrow">h = W·x</div>
+      <div class="inj-cell"><div class="inj-cap">h dans le plan ℝ²</div><svg id="inj-h" viewBox="0 0 200 200"></svg></div>
+      <div class="inj-arrow">ReLU(Wᵀh + b)</div>
+      <div class="inj-cell"><div class="inj-cap">Reconstruction x̂</div><svg id="inj-out" viewBox="0 0 200 200"></svg></div>
+    </div>
+  </div>
+
+  <p class="note">
+    <b>Comment lire.</b> À gauche, chaque flèche est une feature, telle que le modèle la range dans
+    le plan à 2 dimensions. À droite, la diagonale (ambre) dit à quel point chaque feature est encodée ;
+    le hors-diagonale dit comment elles se gênent — ambre = interférence positive, sarcelle = négative,
+    celle que le ReLU rend <b>gratuite</b>. Coupez le ReLU : le modèle ne tolère plus aucune
+    interférence et retombe sur deux features orthogonales, quelle que soit la sparsité.
+  </p>
+  <p class="note">
+    <b>Le Rendu 6 (en bas)</b> rend l'interférence palpable. Activez <b>une seule</b> feature : son
+    vecteur devient h dans le plan, puis le décodeur reconstruit le tout. Sur les features
+    <i>inactives</i> apparaissent des barres pointillées — les <b>fantômes</b> d'interférence.
+    ReLU activé, ils sont écrasés vers zéro (l'interférence négative est gratuite) ; coupez le ReLU
+    et ils ressortent, positifs comme négatifs. Activez-en deux qui se gênent dans la heatmap : le
+    fantôme grossit. C'est exactement pourquoi la superposition ne marche que si les features
+    s'activent rarement ensemble.
+  </p>
+</div>
+
+<script>
+/* ============ toy model : x -> h=Wx -> xhat=ReLU(WᵀWx+b) ============ */
+let n = 5, S = 0.10, r = 0.90, useReLU = true;
+let xin = [];                          // vecteur d'entrée du Rendu 6
+let W, b, mW, vW, mb, vb, t;          // params + état Adam
+const M = 2, B = 256, K = 24;          // dims cachées, batch, pas/frame
+const lr = 0.012, B1 = 0.9, B2 = 0.999, EPS = 1e-8;
+const HUES = ['#E0A64A','#C9605A','#6FA0C9','#84BE7E','#B584C4','#D8C25A'];
+
+function initParams(){
+  W = [[],[]]; b = []; mW=[[],[]]; vW=[[],[]]; mb=[]; vb=[]; t=0;
+  for(let a=0;a<M;a++) for(let i=0;i<n;i++){
+    W[a][i]=(Math.random()*2-1)*0.12; mW[a][i]=0; vW[a][i]=0;
+  }
+  for(let i=0;i<n;i++){ b[i]=0; mb[i]=0; vb[i]=0; }
+}
+const imp = i => Math.pow(r, i);
+
+function trainStep(){
+  const gW=[new Array(n).fill(0), new Array(n).fill(0)];
+  const gb=new Array(n).fill(0);
+  let loss=0;
+  for(let s=0;s<B;s++){
+    // échantillon creux
+    const x=new Array(n);
+    for(let i=0;i<n;i++) x[i] = (Math.random()<S)?0:Math.random();
+    // forward
+    let h0=0,h1=0;
+    for(let i=0;i<n;i++){ h0+=W[0][i]*x[i]; h1+=W[1][i]*x[i]; }
+    const z=new Array(n), xh=new Array(n), g=new Array(n);
+    for(let i=0;i<n;i++){
+      z[i]=b[i]+W[0][i]*h0+W[1][i]*h1;
+      xh[i]=useReLU?Math.max(0,z[i]):z[i];
+      const err=xh[i]-x[i]; const I=imp(i);
+      loss+=I*err*err;
+      const dz=(useReLU&&z[i]<=0)?0:1;
+      g[i]=2*I*err*dz;            // dL/dz
+    }
+    // backward
+    let dh0=0,dh1=0;
+    for(let i=0;i<n;i++){ dh0+=g[i]*W[0][i]; dh1+=g[i]*W[1][i]; gb[i]+=g[i]; }
+    for(let i=0;i<n;i++){
+      gW[0][i]+=g[i]*h0+dh0*x[i];
+      gW[1][i]+=g[i]*h1+dh1*x[i];
+    }
+  }
+  // Adam
+  t++;
+  const bc1=1-Math.pow(B1,t), bc2=1-Math.pow(B2,t);
+  for(let a=0;a<M;a++) for(let i=0;i<n;i++){
+    const gr=gW[a][i]/B;
+    mW[a][i]=B1*mW[a][i]+(1-B1)*gr;
+    vW[a][i]=B2*vW[a][i]+(1-B2)*gr*gr;
+    W[a][i]-=lr*(mW[a][i]/bc1)/(Math.sqrt(vW[a][i]/bc2)+EPS);
+  }
+  for(let i=0;i<n;i++){
+    const gr=gb[i]/B;
+    mb[i]=B1*mb[i]+(1-B1)*gr;
+    vb[i]=B2*vb[i]+(1-B2)*gr*gr;
+    b[i]-=lr*(mb[i]/bc1)/(Math.sqrt(vb[i]/bc2)+EPS);
+  }
+  return loss/(B);
+}
+
+/* ============ analyse ============ */
+function norms(){ const o=[]; for(let i=0;i<n;i++) o.push(Math.hypot(W[0][i],W[1][i])); return o; }
+function WtW(){ const o=[]; for(let i=0;i<n;i++){o[i]=[];for(let j=0;j<n;j++) o[i][j]=W[0][i]*W[0][j]+W[1][i]*W[1][j];} return o; }
+function shapeName(k){ return ({0:'—',1:'point',2:'antipodale',3:'triangle',4:'carré',5:'pentagone',6:'hexagone'})[k]||k+'-gone'; }
+
+/* ============ rendu ============ */
+const SC=110, CX=200, CY=200;
+function renderGeom(){
+  const svg=document.getElementById('geom');
+  let s='';
+  s+=`<circle class="ring" cx="${CX}" cy="${CY}" r="${SC}"/>`;
+  s+=`<line class="axis" x1="40" y1="${CY}" x2="360" y2="${CY}"/>`;
+  s+=`<line class="axis" x1="${CX}" y1="40" x2="${CX}" y2="360"/>`;
+  for(let i=0;i<n;i++){
+    const ex=CX+W[0][i]*SC, ey=CY-W[1][i]*SC;
+    const nrm=Math.hypot(W[0][i],W[1][i]);
+    const op=Math.min(1,Math.max(0.12,nrm*1.15));
+    const col=HUES[i];
+    s+=`<line x1="${CX}" y1="${CY}" x2="${ex}" y2="${ey}" stroke="${col}" stroke-width="2.6" opacity="${op}"/>`;
+    // pointe de flèche
+    if(nrm>0.05){
+      const ang=Math.atan2(ey-CY,ex-CX), ah=8;
+      const a1=ang+2.7, a2=ang-2.7;
+      s+=`<path d="M ${ex} ${ey} L ${ex+ah*Math.cos(a1)} ${ey+ah*Math.sin(a1)} L ${ex+ah*Math.cos(a2)} ${ey+ah*Math.sin(a2)} Z" fill="${col}" opacity="${op}"/>`;
+    }
+    if(nrm>0.18) s+=`<text class="flabel" x="${ex+10*Math.cos(Math.atan2(ey-CY,ex-CX))}" y="${ey+10*Math.sin(Math.atan2(ey-CY,ex-CX))+4}" fill="${col}" opacity="${op}">${i}</text>`;
+  }
+  svg.innerHTML=s;
+}
+function lerpHexAlpha(v,diag){
+  // v dans [-1,1] -> diagonale=or pâle(représentation), sinon ambre(+)/sarcelle(-), alpha=|v|
+  const pos=[224,166,74], neg=[74,166,160], rep=[216,180,106];
+  const c=diag?rep:(v>=0?pos:neg), a=Math.min(1,Math.abs(v));
+  return `rgba(${c[0]},${c[1]},${c[2]},${a.toFixed(3)})`;
+}
+function renderHeat(){
+  const svg=document.getElementById('heat');
+  const G=WtW(), pad=46, cell=(400-pad-20)/n;
+  let s='';
+  for(let i=0;i<n;i++){
+    for(let j=0;j<n;j++){
+      const x=pad+j*cell, y=pad+i*cell, v=G[i][j];
+      const diag=i===j;
+      s+=`<rect x="${x}" y="${y}" width="${cell-2}" height="${cell-2}" rx="2"
+           fill="${lerpHexAlpha(v,diag)}" stroke="${diag?'#5a4f33':'#22252c'}" stroke-width="${diag?1.6:0.8}"/>`;
+      if(cell>34) s+=`<text x="${x+cell/2-1}" y="${y+cell/2+3}" text-anchor="middle"
+           font-family="'IBM Plex Mono',monospace" font-size="${Math.min(12,cell*0.3)}"
+           fill="${Math.abs(v)>0.45?'#0d0e11':'#7b7d82'}">${v.toFixed(2)}</text>`;
+    }
+    s+=`<text class="flabel" x="${pad-12}" y="${pad+i*cell+cell/2+4}" text-anchor="end" fill="${HUES[i]}">${i}</text>`;
+    s+=`<text class="flabel" x="${pad+i*cell+cell/2}" y="${pad-12}" text-anchor="middle" fill="${HUES[i]}">${i}</text>`;
+  }
+  svg.innerHTML=s;
+}
+function renderReadout(){
+  const nm=norms(); const rep=nm.filter(v=>v>0.32).length;
+  document.getElementById('r-rep').textContent=rep;
+  document.getElementById('r-shape').textContent=useReLU?shapeName(rep):'orthogonale';
+  document.getElementById('t-geom').textContent=`${rep} représentées`;
+}
+
+/* ============ injection — rendu 6 ============ */
+function initInject(){ xin=new Array(n).fill(0); xin[0]=0.85; }
+function styleChip(chip,i){
+  if(xin[i]>0){ chip.style.background=HUES[i]; chip.style.color='#0d0e11'; chip.style.borderColor=HUES[i]; }
+  else { chip.style.background=''; chip.style.color=''; chip.style.borderColor=''; }
+}
+function buildChips(){
+  const c=document.getElementById('inj-chips'); c.innerHTML='';
+  for(let i=0;i<n;i++){
+    const chip=document.createElement('button'); chip.className='chip';
+    chip.textContent='feature '+i; chip.dataset.i=i; styleChip(chip,i);
+    chip.onclick=()=>{ xin[i]=xin[i]>0?0:0.85; styleChip(chip,i); };
+    c.appendChild(chip);
+  }
+}
+function barSVG(vals, ghostOf){
+  const base=150, bw=180/n, x0=12, sc=105;
+  let s=`<line x1="8" y1="${base}" x2="192" y2="${base}" stroke="#2a2e37" stroke-width="1"/>`;
+  for(let i=0;i<n;i++){
+    const v=vals[i], ghost=ghostOf(i), x=x0+i*bw+bw*0.18, w=bw*0.64;
+    if(v>=0){
+      const h2=Math.min(128,v*sc), y=base-h2;
+      s+=`<rect x="${x}" y="${y}" width="${w}" height="${h2}" rx="2"
+        fill="${ghost?'none':HUES[i]}" opacity="${ghost?0.9:1}"
+        ${ghost?`stroke="${HUES[i]}" stroke-dasharray="3 3" stroke-width="1.4"`:''}/>`;
+    } else {
+      const h2=Math.min(45,-v*sc);
+      s+=`<rect x="${x}" y="${base}" width="${w}" height="${h2}" rx="2"
+        fill="none" stroke="${HUES[i]}" stroke-dasharray="3 3" stroke-width="1.4" opacity="0.7"/>`;
+    }
+    s+=`<text x="${x+w/2}" y="${base+15}" text-anchor="middle"
+      font-family="'IBM Plex Mono',monospace" font-size="10" fill="${HUES[i]}" opacity="${ghost?0.7:1}">${i}</text>`;
+  }
+  return s;
+}
+function renderInject(){
+  let h0=0,h1=0;
+  for(let i=0;i<n;i++){ h0+=W[0][i]*xin[i]; h1+=W[1][i]*xin[i]; }
+  const G=WtW(), xh=[];
+  for(let i=0;i<n;i++){ let z=b[i]; for(let k=0;k<n;k++) z+=G[i][k]*xin[k]; xh[i]=useReLU?Math.max(0,z):z; }
+
+  document.getElementById('inj-in').innerHTML = barSVG(xin, ()=>false);
+  document.getElementById('inj-out').innerHTML = barSVG(xh, i=>xin[i]<=0);
+
+  const sc=64, cx=100, cy=100;
+  let hs=`<circle cx="${cx}" cy="${cy}" r="${sc}" fill="none" stroke="#2a2e37" stroke-dasharray="3 4"/>`;
+  hs+=`<line x1="30" y1="${cy}" x2="170" y2="${cy}" stroke="#3a3e47" stroke-width="1"/>`;
+  hs+=`<line x1="${cx}" y1="30" x2="${cx}" y2="170" stroke="#3a3e47" stroke-width="1"/>`;
+  for(let i=0;i<n;i++){
+    const ex=cx+W[0][i]*sc, ey=cy-W[1][i]*sc, act=xin[i]>0;
+    hs+=`<line x1="${cx}" y1="${cy}" x2="${ex}" y2="${ey}" stroke="${HUES[i]}" stroke-width="${act?2.2:1}" opacity="${act?0.95:0.22}"/>`;
+  }
+  const hx=cx+h0*sc, hy=cy-h1*sc;
+  hs+=`<line x1="${cx}" y1="${cy}" x2="${hx}" y2="${hy}" stroke="#e9e6dc" stroke-width="1" stroke-dasharray="2 3" opacity="0.55"/>`;
+  hs+=`<circle cx="${hx}" cy="${hy}" r="5" fill="#e9e6dc" stroke="#0d0e11" stroke-width="1.5"/>`;
+  hs+=`<text x="${hx+8}" y="${hy-6}" font-family="'IBM Plex Mono',monospace" font-size="11" fill="#e9e6dc">h</text>`;
+  document.getElementById('inj-h').innerHTML=hs;
+
+  const act=xin.filter(v=>v>0).length;
+  document.getElementById('t-inj').textContent=`${act} active${act>1?'s':''}`;
+}
+
+/* ============ boucle ============ */
+let lastLoss=0, paused=false;
+function frame(){
+  if(!paused){ for(let k=0;k<K;k++) lastLoss=trainStep(); }
+  renderGeom(); renderHeat(); renderReadout(); renderInject();
+  document.getElementById('r-loss').textContent=lastLoss.toFixed(4);
+  requestAnimationFrame(frame);
+}
+
+/* ============ UI ============ */
+function setS(v){S=v;document.getElementById('s-S').value=v;document.getElementById('v-S').textContent=v.toFixed(2);}
+function setR(v){r=v;document.getElementById('s-r').value=v;document.getElementById('v-r').textContent=v.toFixed(2);}
+function setN(v){ n=v; initParams(); initInject(); buildChips(); document.querySelectorAll('#nsel button').forEach(btn=>btn.classList.toggle('on',+btn.dataset.n===v)); }
+
+document.getElementById('s-S').addEventListener('input',e=>setS(+e.target.value));
+document.getElementById('s-r').addEventListener('input',e=>setR(+e.target.value));
+document.getElementById('relu').addEventListener('click',e=>{
+  useReLU=!useReLU; e.target.classList.toggle('on',useReLU);
+  e.target.textContent=useReLU?'ReLU ON':'ReLU OFF';
+});
+
+function setPaused(p){
+  paused=p;
+  const btn=document.getElementById('pause');
+  btn.textContent=p?'▶ Reprendre':'⏸ Pause';
+  btn.classList.toggle('on',p);
+  document.getElementById('train-state').textContent=p?'figé':'apprend…';
+}
+document.getElementById('pause').addEventListener('click',()=>setPaused(!paused));
+document.getElementById('retrain').addEventListener('click',()=>{
+  initParams(); setPaused(false);
+});
+
+const nsel=document.getElementById('nsel');
+[2,3,4,5,6].forEach(v=>{const btn=document.createElement('button');btn.textContent=v;btn.dataset.n=v;
+  btn.className=v===5?'on':'';btn.onclick=()=>setN(v);nsel.appendChild(btn);});
+
+const presets=[
+  ['Compression (2 orth.)',5,0.05,0.85],
+  ['Antipodale n=2',2,0.90,0.9],
+  ['Triangle n=3',3,0.90,0.95],
+  ['Carré n=4',4,0.91,0.95],
+  ['Pentagone n=5',5,0.93,0.97],
+];
+const pc=document.getElementById('presets');
+presets.forEach(([lab,pn,ps,pr])=>{const btn=document.createElement('button');btn.textContent=lab;
+  btn.onclick=()=>{setN(pn);setS(ps);setR(pr);};pc.appendChild(btn);});
+
+initParams(); setN(5); frame();
+</script>
+</body>
+</html>

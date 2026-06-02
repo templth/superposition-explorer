@@ -1,0 +1,14 @@
+:root {
+  --bg: #0d0e11;
+  --panel: #14161b;
+  --panel2: #191c22;
+  --line: #2a2e37;
+  --text: #c9c7be;
+  --dim: #7b7d82;
+  --faint: #4a4d55;
+  --rep: #d8b46a;
+  --pos: #e0a64a;
+  --neg: #4aa6a0;
+}
+
+html, body, #root { background: var(--bg); color: var(--text); }

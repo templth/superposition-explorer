@@ -79,7 +79,7 @@ function App() {
         </div>
 
         <div style={{ marginTop: 18 }}>
-          <Panel title="R3 · Perte vs pas" tagValue="entraînement live" hotkey={3}>
+          <Panel title="R3 · Perte vs pas" tagValue="entraînement live" hotkey={3} collapsible>
             <R3_Loss />
           </Panel>
         </div>

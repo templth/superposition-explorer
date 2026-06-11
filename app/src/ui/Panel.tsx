@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { useExplorer, type RenderId } from '../state/useExplorer';
 
 type Props = {
@@ -8,10 +8,22 @@ type Props = {
   children: ReactNode;
   footer?: ReactNode;
   style?: CSSProperties;
+  collapsible?: boolean;
+  defaultCollapsed?: boolean;
 };
 
-export function Panel({ title, tagValue, hotkey, children, footer, style }: Props) {
+export function Panel({
+  title,
+  tagValue,
+  hotkey,
+  children,
+  footer,
+  style,
+  collapsible,
+  defaultCollapsed,
+}: Props) {
   const setPresenterRender = useExplorer((s) => s.setPresenterRender);
+  const [collapsed, setCollapsed] = useState(defaultCollapsed ?? false);
 
   return (
     <div
@@ -41,6 +53,26 @@ export function Panel({ title, tagValue, hotkey, children, footer, style }: Prop
         <span>{title}</span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {tagValue !== undefined && <span style={{ color: 'var(--pos)' }}>{tagValue}</span>}
+          {collapsible && (
+            <button
+              onClick={() => setCollapsed((c) => !c)}
+              title={collapsed ? 'Déplier' : 'Replier'}
+              aria-expanded={!collapsed}
+              style={{
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 10,
+                letterSpacing: '0.08em',
+                padding: '2px 7px',
+                borderRadius: 2,
+                background: 'transparent',
+                color: 'var(--dim)',
+                border: '1px solid var(--line)',
+                cursor: 'pointer',
+              }}
+            >
+              {collapsed ? '▸' : '▾'}
+            </button>
+          )}
           {hotkey !== undefined && (
             <button
               onClick={() => setPresenterRender(hotkey)}
@@ -62,8 +94,12 @@ export function Panel({ title, tagValue, hotkey, children, footer, style }: Prop
           )}
         </span>
       </div>
-      {children}
-      {footer}
+      {!collapsed && (
+        <>
+          {children}
+          {footer}
+        </>
+      )}
     </div>
   );
 }
